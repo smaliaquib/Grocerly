@@ -32,7 +32,7 @@ It demonstrates a production-grade pipeline for **automating product ingestion, 
 
 The architecture connects AWS AppSync → Lambda → Bedrock → Textract → Stripe APIs in a modular, event-driven fashion.
 
-![Grocerly Architecture](./2.png)
+![Grocerly Architecture](./images/2.png)
 
 #### Core Components:
 | Layer | Description |
@@ -50,7 +50,7 @@ The architecture connects AWS AppSync → Lambda → Bedrock → Textract → St
 
 The document processing pipeline performs PDF detection, Textract job polling, and failure handling with retries.
 
-![Step Function Workflow](./1.png)
+![Step Function Workflow](./images/1.png)
 
 **Workflow Steps:**
 1. **DetectFileType** – Checks if the uploaded file is a PDF or image.

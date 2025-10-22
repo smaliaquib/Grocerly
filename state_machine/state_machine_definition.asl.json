@@ -1,0 +1,141 @@
+{
+  "Comment": "Workflow to process files uploaded to S3, extract text using Textract, and send results to SQS.",
+  "StartAt": "DetectFileType",
+  "States": {
+    "DetectFileType": {
+      "Type": "Choice",
+      "Default": "DetectDocumentText",
+      "Choices": [
+        {
+          "Next": "StartDocumentTextDetection",
+          "Condition": "{% $states.input.file_extension = \"pdf\"%}"
+        }
+      ],
+      "QueryLanguage": "JSONata"
+    },
+    "StartDocumentTextDetection": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:textract:startDocumentTextDetection",
+      "Next": "WaitForPDFConversion",
+      "QueryLanguage": "JSONata",
+      "Arguments": {
+        "DocumentLocation": {
+          "S3Object": {
+            "Bucket": "{% $states.input.bucket_name %}",
+            "Name": "{% $states.input.object_key %}"
+          }
+        },
+        "OutputConfig": {
+          "S3Bucket": "{% $states.input.bucket_name %}",
+          "S3Prefix": "converted/"
+        }
+      },
+      "Assign": {
+        "JobId": "{% $states.result.JobId %}"
+      }
+    },
+    "WaitForPDFConversion": {
+      "Type": "Wait",
+      "Seconds": 10,
+      "Next": "GetDocumentTextDetection",
+      "QueryLanguage": "JSONata"
+    },
+    "GetDocumentTextDetection": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:textract:getDocumentTextDetection",
+      "Next": "IsPDFConversionComplete",
+      "QueryLanguage": "JSONata",
+      "Arguments": {
+        "JobId": "{% $JobId %}"
+      },
+      "Output": {
+        "JobStatus": "{% $states.result.JobStatus %}"
+      }
+    },
+    "IsPDFConversionComplete": {
+      "Type": "Choice",
+      "Default": "WaitForPDFConversion",
+      "Choices": [
+        {
+          "Next": "DetectDocumentText",
+          "Condition": "{% $states.input.JobStatus = \"SUCCEEDED\" %}"
+        },
+        {
+          "Next": "PDFConversionFailed",
+          "Condition": "{% $states.input.JobStatus = \"FAILED\" %}"
+        }
+      ],
+      "QueryLanguage": "JSONata"
+    },
+    "PDFConversionFailed": {
+      "Type": "Fail",
+      "Cause": "PDF to JPEG conversion failed.",
+      "Error": "PDFConversionFailed",
+      "QueryLanguage": "JSONata"
+    },
+    "DetectDocumentText": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:textract:detectDocumentText",
+      "Next": "Pass",
+      "QueryLanguage": "JSONata",
+      "Arguments": {
+        "Document": {
+          "S3Object": {
+            "Bucket": "{% $states.context.Execution.Input.bucket_name %}",
+            "Name": "{% $states.context.Execution.Input.object_key %}"
+          }
+        }
+      },
+      "Output": {
+        "result": "{% $states.result %}"
+      }
+    },
+    "Pass": {
+      "Type": "Pass",
+      "QueryLanguage": "JSONata",
+      "Output": {
+        "text": "{% $join($map($filter($states.input.result.Blocks, function($v) { $v.BlockType='LINE' }), function($item) { $item.Text }), '\n') %}",
+        "bucket": "{% $states.context.Execution.Input.bucket_name %}",
+        "key": "{% $states.context.Execution.Input.object_key %}"
+      },
+      "Next": "SQS SendMessage"
+    },
+    "SQS SendMessage": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+      "QueryLanguage": "JSONata",
+      "Arguments": {
+        "QueueUrl": "${SQS_QUEUE_URL}",
+        "MessageBody": {
+          "input": "{% $states.input %}",
+          "taskToken": "{% $states.context.Task.Token %}"
+        }
+      },
+      "Next": "Lambda Invoke"
+    },
+    "Lambda Invoke": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true,
+      "QueryLanguage": "JSONata",
+      "Arguments": {
+        "Payload": "{% $states.input %}",
+        "FunctionName": "${INVOKE_LAMBDA_FUNCTION_ARN}"
+      }
+    }
+  }
+}

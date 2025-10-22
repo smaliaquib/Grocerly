@@ -1,0 +1,74 @@
+schema {
+  query: Query
+  mutation: Mutation
+    subscription: Subscription
+}
+
+type Mutation {
+    publish(detailType: String!, id:String! data: String!, source: String!, account: String!, time: String!, region: String!): Event @aws_iam @aws_api_key
+
+    batchUploadProducts: String
+    createStripeProducts:String
+}
+type Query {
+    getProduct(id:String!):Product!
+
+}
+
+type Subscription {
+    subscribe(detailType: String, account: String, source: String, region: String): Event
+		@aws_subscribe(mutations: ["publish"])
+
+}
+type Event @aws_iam @aws_api_key{
+	id: String!
+	source: String!
+	account: String!
+	time: String!
+	region: String!
+	detailType: String!
+	data: AWSJSON!
+}
+
+
+type Product {
+    productId: String!
+    category: String!
+    createdDate: String!
+    description: String!
+    modifiedDate: String!
+    name: String!
+    package: Package!
+    pictures: [String!]!
+    price: Int!
+    tags: [String!]!
+}
+
+type Package {
+    height: Int!
+    length: Int!
+    weight: Int!
+    width: Int!
+}
+
+
+
+input ProductInput {
+    productId: String!
+    category: String!
+    createdDate: String!
+    description: String!
+    modifiedDate: String!
+    name: String!
+    package: PackageInput!
+    pictures: [String!]!
+    price: Int!
+    tags: [String!]!
+}
+
+input PackageInput {
+    height: Int!
+    length: Int!
+    weight: Int!
+    width: Int!
+}

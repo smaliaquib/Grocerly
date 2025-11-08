@@ -5,7 +5,7 @@ It demonstrates a production-grade pipeline for **automating product ingestion, 
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 - **Automated Document Processing**
   - Uses **Amazon Textract** to extract structured data from PDFs and images.
@@ -26,9 +26,9 @@ It demonstrates a production-grade pipeline for **automating product ingestion, 
 
 ---
 
-## 🧩 Architecture Overview
+## Architecture Overview
 
-### 🖇️ High-Level System Design
+### High-Level System Design
 
 The architecture connects AWS AppSync → Lambda → Bedrock → Textract → Stripe APIs in a modular, event-driven fashion.
 
@@ -46,7 +46,7 @@ The architecture connects AWS AppSync → Lambda → Bedrock → Textract → St
 
 ---
 
-## 🧠 AWS Step Functions Workflow
+## AWS Step Functions Workflow
 
 The document processing pipeline performs PDF detection, Textract job polling, and failure handling with retries.
 
@@ -63,7 +63,7 @@ The document processing pipeline performs PDF detection, Textract job polling, a
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 | Category | Tools & Services |
 |-----------|------------------|
@@ -78,7 +78,7 @@ The document processing pipeline performs PDF detection, Textract job polling, a
 
 ---
 
-## 🧰 Deployment
+## Deployment
 
 ### Prerequisites
 - AWS Account with permissions for:
